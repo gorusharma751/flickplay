@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FlickPlay Admin</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#f4f4f8;color:#1a1a2e;font-size:14px}
+:root{--accent:#7c3aed;--accent2:#a78bfa;--bg:#f4f4f8;--card:#fff;--border:#e0e0f0;--text:#1a1a2e;--text2:#666;--sidebar:#0a0a14}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:200px;background:var(--sidebar);color:#fff;flex-shrink:0;display:flex;flex-direction:column}
+.sidebar-logo{padding:20px 16px 16px;font-size:16px;font-weight:800;color:#a78bfa;border-bottom:1px solid #1e1e2e}
+.sidebar-logo small{display:block;font-size:10px;color:#555;font-weight:400;margin-top:2px}
+.s-section{padding:12px 16px 4px;font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.5px}
+.s-item{padding:9px 16px;font-size:12px;color:#888;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;text-decoration:none}
+.s-item:hover{background:#1a1a2e;color:#fff}
+.s-item.active{background:#1e1040;color:#a78bfa;border-left:2px solid #7c3aed}
+.main{flex:1;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 24px;justify-content:space-between}
+.topbar-title{font-size:16px;font-weight:700}
+.page{padding:24px;overflow-y:auto;max-height:calc(100vh - 52px)}
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-val{font-size:24px;font-weight:800;color:var(--text)}
+.stat-label{font-size:12px;color:var(--text2);margin-top:3px}
+.stat-chip{display:inline-block;margin-top:6px;font-size:11px;padding:2px 8px;border-radius:20px}
+.chip-green{background:#dcfce7;color:#166534}
+.chip-purple{background:#ede9fe;color:#4c1d95}
+.chip-amber{background:#fef3c7;color:#78350f}
+.btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#6d28d9}
+.btn-danger{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 12px;font-size:11px;color:var(--text2);font-weight:600;background:#f8f8fc;border-bottom:2px solid var(--border)}
+td{padding:10px 12px;font-size:12px;border-bottom:1px solid #f5f5fa;vertical-align:middle}
+tr:hover td{background:#fafafd}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.badge-free{background:#dcfce7;color:#166534}
+.badge-pro{background:#ede9fe;color:#4c1d95}
+.badge-premium{background:#fef3c7;color:#78350f}
+.badge-live{background:#dcfce7;color:#166534}
+.badge-hidden{background:#fee2e2;color:#991b1b}
+input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;background:#fff;transition:border .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1a2e;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:2000;animation:slideIn .2s}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f}
+.login-card{background:#0d0d14;border:1px solid #1e1e2e;border-radius:14px;padding:32px;width:100%;max-width:380px}
+.login-logo{font-size:28px;font-weight:800;color:#a78bfa;text-align:center;margin-bottom:24px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tab-nav{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab-btn{padding:8px 16px;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.search-bar{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:220px;outline:none}
+.search-bar:focus{border-color:var(--accent)}
+.actions{display:flex;gap:6px}
+</style>
+</head>
+<body>
+<div id="admin-root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+const BASE = 'http://localhost:8000';
+const api = axios.create({ baseURL: BASE });
+api.interceptors.request.use(c => { const t = localStorage.getItem('admin_token'); if(t) c.headers.Authorization=`Bearer ${t}`; return c; });
+
+function Toast({ msg, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, []);
+  return <div className="toast">{msg}</div>;
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-title">
+          {title}
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#888'}}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ---- LOGIN ----
+function Login({ onLogin }) {
+  const [form, setForm] = useState({ email: 'admin@flickplay.com', password: 'admin123' });
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault(); setLoading(true); setErr('');
+    try {
+      const res = await api.post('/api/admin/login', form);
+      localStorage.setItem('admin_token', res.data.token);
+      onLogin(res.data.admin);
+    } catch (e) { setErr(e.response?.data?.detail || 'Login failed'); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-card">
+        <div className="login-logo">FlickPlay Admin</div>
+        <form onSubmit={submit}>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} required />
+          </div>
+          {err && <div style={{color:'#ef4444',fontSize:12,marginBottom:10}}>{err}</div>}
+          <button className="btn btn-primary" type="submit" style={{width:'100%',padding:10}} disabled={loading}>
+            {loading ? 'Logging in...' : 'Sign In'}
+          </button>
+        </form>
+        <div style={{marginTop:16,fontSize:11,color:'#555',textAlign:'center'}}>Default: admin@flickplay.com / admin123</div>
+      </div>
+    </div>
+  );
+}
+
+// ---- DASHBOARD ----
+function Dashboard() {
+  const [stats, setStats] = useState({});
+  useEffect(() => { api.get('/api/admin/dashboard').then(r=>setStats(r.data)).catch(()=>{}); }, []);
+  return (
+    <div>
+      <div className="stats-grid">
+        {[
+          { label: 'Total Videos', val: stats.total_videos || 0, chip: 'Videos', cls: 'chip-purple' },
+          { label: 'Total Users', val: stats.total_users || 0, chip: `${stats.pro_users||0} Pro + ${stats.premium_users||0} Premium`, cls: 'chip-green' },
+          { label: 'Free Users', val: stats.free_users || 0, chip: 'Free plan', cls: '' },
+          { label: 'Total Views', val: (stats.total_views||0).toLocaleString(), chip: 'All time', cls: 'chip-amber' },
+        ].map(s => (
+          <div key={s.label} className="stat-card">
+            <div className="stat-val">{s.val}</div>
+            <div className="stat-label">{s.label}</div>
+            {s.chip && <span className={`stat-chip ${s.cls}`}>{s.chip}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div style={{fontWeight:700,marginBottom:12,fontSize:15}}>Quick Actions</div>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          <button className="btn btn-primary" onClick={()=>window.dispatchEvent(new CustomEvent('nav',{detail:'videos'}))}>+ Add Video</button>
+          <button className="btn btn-outline" onClick={()=>window.dispatchEvent(new CustomEvent('nav',{detail:'settings'}))}>App Settings</button>
+          <button className="btn btn-outline" onClick={()=>window.dispatchEvent(new CustomEvent('nav',{detail:'users'}))}>Manage Users</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- VIDEOS ----
+function Videos({ toast }) {
+  const [videos, setVideos] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [showPartsModal, setShowPartsModal] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [page, setPage] = useState(1);
+  const blank = { title:'',description:'',category:'Movies',subcategory:'',language:'Hindi',year:new Date().getFullYear(),duration:'',quality:'HD',thumbnail_url:'',trailer_url:'',cast_info:'',director:'',rating:0,access_level:'free',total_parts:1,is_series:false,tags:'',is_featured:false };
+  const [form, setForm] = useState(blank);
+
+  const load = useCallback(async (p=1, s='') => {
+    try {
+      const res = await api.get('/api/admin/videos', { params: { page: p, limit: 20, search: s || undefined } });
+      setVideos(res.data.videos); setTotal(res.data.total);
+    } catch {}
+  }, []);
+
+  useEffect(() => { load(page, search); }, [page]);
+
+  const save = async () => {
+    try {
+      if (editing) { await api.put(`/api/admin/videos/${editing}`, form); toast('Video updated!'); }
+      else { await api.post('/api/admin/videos', form); toast('Video added!'); }
+      setShowModal(false); setEditing(null); setForm(blank); load(page, search);
+    } catch(e) { toast(e.response?.data?.detail || 'Error saving video'); }
+  };
+
+  const del = async (id) => {
+    if (!confirm('Delete this video?')) return;
+    await api.delete(`/api/admin/videos/${id}`);
+    toast('Video deleted'); load(page, search);
+  };
+
+  const openEdit = (v) => {
+    setEditing(v.id);
+    setForm({ title:v.title, description:'', category:v.category, subcategory:'', language:'Hindi', year:v.year||new Date().getFullYear(), duration:v.duration||'', quality:v.quality||'HD', thumbnail_url:v.thumbnail_url||'', trailer_url:'', cast_info:'', director:'', rating:v.rating||0, access_level:v.access_level, total_parts:v.total_parts||1, is_series:false, tags:'', is_featured:v.is_featured });
+    setShowModal(true);
+  };
+
+  return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <div style={{display:'flex',gap:10}}>
+          <input className="search-bar" placeholder="Search videos..." value={search}
+            onChange={e=>setSearch(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&load(1,search)} />
+          <button className="btn btn-outline btn-sm" onClick={()=>load(1,search)}>Search</button>
+        </div>
+        <button className="btn btn-primary" onClick={()=>{setEditing(null);setForm(blank);setShowModal(true)}}>+ Add Video</button>
+      </div>
+
+      <div className="card" style={{padding:0,overflow:'hidden'}}>
+        <table>
+          <thead><tr><th>Title</th><th>Category</th><th>Access</th><th>Parts</th><th>Featured</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            {videos.map(v => (
+              <tr key={v.id}>
+                <td><div style={{fontWeight:600}}>{v.title}</div><div style={{fontSize:11,color:'#888'}}>{v.views} views</div></td>
+                <td>{v.category}</td>
+                <td><span className={`badge badge-${v.access_level}`}>{v.access_level.toUpperCase()}</span></td>
+                <td>{v.total_parts}</td>
+                <td>{v.is_featured ? '⭐ Yes' : '—'}</td>
+                <td><span className={`badge ${v.is_active ? 'badge-live' : 'badge-hidden'}`}>{v.is_active ? 'Live' : 'Hidden'}</span></td>
+                <td>
+                  <div className="actions">
+                    <button className="btn btn-outline btn-sm" onClick={()=>openEdit(v)}>Edit</button>
+                    <button className="btn btn-outline btn-sm" style={{color:'#7c3aed',borderColor:'#7c3aed'}} onClick={()=>setShowPartsModal(v)}>Parts</button>
+                    <button className="btn btn-danger btn-sm" onClick={()=>del(v.id)}>Del</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {videos.length===0 && <tr><td colSpan={7} style={{textAlign:'center',padding:40,color:'#888'}}>No videos found. Add your first video!</td></tr>}
+          </tbody>
+        </table>
+        <div style={{padding:'10px 16px',display:'flex',justifyContent:'space-between',fontSize:12,color:'#888',borderTop:'1px solid #f0f0f8'}}>
+          <span>{total} total videos</span>
+          <div style={{display:'flex',gap:8}}>
+            <button className="btn btn-outline btn-sm" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page<=1}>← Prev</button>
+            <span style={{padding:'4px 8px'}}>Page {page}</span>
+            <button className="btn btn-outline btn-sm" onClick={()=>setPage(p=>p+1)} disabled={videos.length<20}>Next →</button>
+          </div>
+        </div>
+      </div>
+
+      {showModal && (
+        <Modal title={editing ? 'Edit Video' : 'Add New Video'} onClose={()=>{setShowModal(false);setEditing(null)}}>
+          <div className="form-grid">
+            {[['Title','title','text'],['Director','director','text'],['Year','year','number'],['Duration','duration','text'],['Rating','rating','number'],['Season','season_number','number']].map(([l,k,t])=>(
+              <div key={k} className="form-group"><label className="form-label">{l}</label>
+                <input type={t} value={form[k]||''} onChange={e=>setForm({...form,[k]:t==='number'?Number(e.target.value):e.target.value})} /></div>
+            ))}
+          </div>
+          <div className="form-grid">
+            <div className="form-group"><label className="form-label">Category</label>
+              <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
+                {['Movies','Web Series','Shows','Drama','Kids','Action','Comedy','Thriller','Horror','Romance'].map(c=><option key={c}>{c}</option>)}
+              </select></div>
+            <div className="form-group"><label className="form-label">Language</label>
+              <select value={form.language} onChange={e=>setForm({...form,language:e.target.value})}>
+                {['Hindi','English','Tamil','Telugu','Malayalam','Punjabi','Bengali'].map(l=><option key={l}>{l}</option>)}
+              </select></div>
+            <div className="form-group"><label className="form-label">Quality</label>
+              <select value={form.quality} onChange={e=>setForm({...form,quality:e.target.value})}>
+                {['480p','720p','HD','1080p','4K'].map(q=><option key={q}>{q}</option>)}
+              </select></div>
+            <div className="form-group"><label className="form-label">Access Level</label>
+              <select value={form.access_level} onChange={e=>setForm({...form,access_level:e.target.value})}>
+                <option value="free">Free</option><option value="pro">Pro</option><option value="premium">Premium</option>
+              </select></div>
+            <div className="form-group"><label className="form-label">Total Parts</label>
+              <input type="number" min="1" value={form.total_parts} onChange={e=>setForm({...form,total_parts:Number(e.target.value)})} /></div>
+            <div className="form-group"><label className="form-label">Is Series?</label>
+              <select value={form.is_series?'yes':'no'} onChange={e=>setForm({...form,is_series:e.target.value==='yes'})}>
+                <option value="no">No</option><option value="yes">Yes</option>
+              </select></div>
+          </div>
+          <div className="form-group"><label className="form-label">Thumbnail URL</label>
+            <input value={form.thumbnail_url||''} onChange={e=>setForm({...form,thumbnail_url:e.target.value})} placeholder="https://..." /></div>
+          <div className="form-group"><label className="form-label">Cast (comma separated)</label>
+            <input value={form.cast_info||''} onChange={e=>setForm({...form,cast_info:e.target.value})} placeholder="Actor 1, Actor 2..." /></div>
+          <div className="form-group"><label className="form-label">Tags (comma separated)</label>
+            <input value={form.tags||''} onChange={e=>setForm({...form,tags:e.target.value})} placeholder="action, thriller, 2024..." /></div>
+          <div className="form-group"><label className="form-label">Description</label>
+            <textarea value={form.description||''} onChange={e=>setForm({...form,description:e.target.value})} rows={3} style={{resize:'vertical'}} /></div>
+          <div style={{display:'flex',gap:10,marginTop:4}}>
+            <label style={{display:'flex',alignItems:'center',gap:6,fontSize:13,cursor:'pointer'}}>
+              <input type="checkbox" checked={form.is_featured} onChange={e=>setForm({...form,is_featured:e.target.checked})} style={{width:'auto'}} />
+              Featured on homepage
+            </label>
+          </div>
+          <div style={{display:'flex',gap:10,marginTop:20,justifyContent:'flex-end'}}>
+            <button className="btn btn-outline" onClick={()=>{setShowModal(false);setEditing(null)}}>Cancel</button>
+            <button className="btn btn-primary" onClick={save}>Save Video</button>
+          </div>
+        </Modal>
+      )}
+
+      {showPartsModal && <PartsModal video={showPartsModal} onClose={()=>setShowPartsModal(null)} toast={toast} />}
+    </div>
+  );
+}
+
+// ---- PARTS MODAL ----
+function PartsModal({ video, onClose, toast }) {
+  const [parts, setParts] = useState([]);
+  const [form, setForm] = useState({ video_id: video.id, part_number: 1, title: '', telegram_file_id: '', duration: '', size_mb: '', quality: 'HD' });
+
+  const load = async () => {
+    const res = await api.get(`/api/admin/parts/${video.id}`);
+    setParts(res.data);
+    setForm(f => ({ ...f, part_number: res.data.length + 1 }));
+  };
+  useEffect(() => { load(); }, []);
+
+  const add = async () => {
+    if (!form.telegram_file_id) { toast('Telegram File ID is required'); return; }
+    await api.post('/api/admin/parts', { ...form, size_mb: form.size_mb ? Number(form.size_mb) : null });
+    toast('Part added!'); load();
+    setForm(f => ({ ...f, part_number: f.part_number + 1, title: '', telegram_file_id: '', duration: '', size_mb: '' }));
+  };
+
+  const del = async (id) => { await api.delete(`/api/admin/parts/${id}`); toast('Part deleted'); load(); };
+
+  return (
+    <Modal title={`Parts — ${video.title}`} onClose={onClose}>
+      <div style={{marginBottom:16}}>
+        {parts.map(p => (
+          <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'#f8f8fc',borderRadius:8,marginBottom:8}}>
+            <div>
+              <div style={{fontWeight:600,fontSize:13}}>Part {p.part_number}{p.title ? ` — ${p.title}` : ''}</div>
+              <div style={{fontSize:11,color:'#888'}}>TG ID: {p.telegram_file_id.slice(0,30)}... • {p.duration} • {p.quality}</div>
+            </div>
+            <button className="btn btn-danger btn-sm" onClick={()=>del(p.id)}>Del</button>
+          </div>
+        ))}
+        {parts.length === 0 && <div style={{color:'#888',fontSize:13,marginBottom:12}}>No parts yet. Add below.</div>}
+      </div>
+      <div style={{background:'#f8f8fc',borderRadius:10,padding:16}}>
+        <div style={{fontWeight:600,fontSize:13,marginBottom:12}}>Add Part {form.part_number}</div>
+        <div className="form-group">
+          <label className="form-label">Telegram File ID *</label>
+          <input value={form.telegram_file_id} onChange={e=>setForm({...form,telegram_file_id:e.target.value})} placeholder="Paste file_id from Telegram bot" />
+          <div style={{fontSize:11,color:'#888',marginTop:4}}>Forward the video to your bot and get file_id using /getfile command</div>
+        </div>
+        <div className="form-grid">
+          <div className="form-group"><label className="form-label">Part Title</label>
+            <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Optional" /></div>
+          <div className="form-group"><label className="form-label">Duration</label>
+            <input value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})} placeholder="1h 30m" /></div>
+          <div className="form-group"><label className="form-label">Size (MB)</label>
+            <input type="number" value={form.size_mb} onChange={e=>setForm({...form,size_mb:e.target.value})} placeholder="1500" /></div>
+          <div className="form-group"><label className="form-label">Quality</label>
+            <select value={form.quality} onChange={e=>setForm({...form,quality:e.target.value})}>
+              {['480p','720p','HD','1080p','4K'].map(q=><option key={q}>{q}</option>)}
+            </select></div>
+        </div>
+        <button className="btn btn-primary" onClick={add}>+ Add Part</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ---- USERS ----
+function Users({ toast }) {
+  const [users, setUsers] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+
+  const load = async (p=1) => {
+    const res = await api.get('/api/admin/users', { params: { page: p, limit: 20 } });
+    setUsers(res.data.users); setTotal(res.data.total);
+  };
+  useEffect(() => { load(page); }, [page]);
+
+  const changePlan = async (userId, plan) => {
+    await api.put(`/api/admin/users/${userId}/plan`, { plan });
+    toast(`Plan updated to ${plan}`); load(page);
+  };
+
+  return (
+    <div>
+      <div style={{marginBottom:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontSize:14,color:'#888'}}>{total} total users</div>
+      </div>
+      <div className="card" style={{padding:0,overflow:'hidden'}}>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>TG Joined</th><th>Joined</th><th>Change Plan</th></tr></thead>
+          <tbody>
+            {users.map(u=>(
+              <tr key={u.id}>
+                <td style={{fontWeight:600}}>{u.name}</td>
+                <td style={{color:'#666'}}>{u.email}</td>
+                <td><span className={`badge badge-${u.plan}`}>{u.plan.toUpperCase()}</span></td>
+                <td style={{color:u.telegram_joined?'#16a34a':'#888'}}>{u.telegram_joined?'✓ Yes':'✗ No'}</td>
+                <td style={{color:'#888',fontSize:11}}>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td>
+                  <select value={u.plan} onChange={e=>changePlan(u.id,e.target.value)} style={{padding:'3px 8px',fontSize:11,width:'auto'}}>
+                    <option value="free">Free</option><option value="pro">Pro</option><option value="premium">Premium</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{padding:'10px 16px',display:'flex',justifyContent:'flex-end',gap:8,borderTop:'1px solid #f0f0f8'}}>
+          <button className="btn btn-outline btn-sm" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page<=1}>← Prev</button>
+          <span style={{padding:'4px 8px',fontSize:12}}>Page {page}</span>
+          <button className="btn btn-outline btn-sm" onClick={()=>setPage(p=>p+1)} disabled={users.length<20}>Next →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- SETTINGS ----
+function Settings({ toast }) {
+  const [settings, setSettings] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    const res = await api.get('/api/admin/settings');
+    setSettings(res.data);
+  };
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    setSaving(true);
+    await api.post('/api/admin/settings/bulk', settings);
+    toast('Settings saved!'); setSaving(false);
+  };
+
+  const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
+
+  const Field = ({ label, k, type='text', hint }) => (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      {type === 'textarea'
+        ? <textarea value={settings[k]||''} onChange={e=>set(k,e.target.value)} rows={2} style={{resize:'vertical'}} />
+        : type === 'toggle'
+        ? <select value={settings[k]||'0'} onChange={e=>set(k,e.target.value)}>
+            <option value="1">Enabled</option><option value="0">Disabled</option>
+          </select>
+        : <input type={type} value={settings[k]||''} onChange={e=>set(k,e.target.value)} />
+      }
+      {hint && <div style={{fontSize:11,color:'#888',marginTop:3}}>{hint}</div>}
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="card">
+        <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>App Settings</div>
+        <div className="settings-grid">
+          <Field label="App Name" k="app_name" />
+          <Field label="App Logo URL" k="app_logo" hint="Direct image URL for logo" />
+          <Field label="Telegram Channel URL" k="telegram_channel" hint="Full URL e.g. https://t.me/yourgroup" />
+          <Field label="Require Telegram Join" k="telegram_required" type="toggle" />
+        </div>
+      </div>
+      <div className="card">
+        <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>Pricing</div>
+        <div className="settings-grid">
+          <Field label="Pro Plan Price (₹/month)" k="pro_price" type="number" />
+          <Field label="Premium Plan Price (₹/month)" k="premium_price" type="number" />
+        </div>
+      </div>
+      <div className="card">
+        <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>Security & DRM</div>
+        <div className="settings-grid">
+          <Field label="Watermark on videos" k="watermark_enabled" type="toggle" hint="Shows user email as faint watermark" />
+          <Field label="Block screen recording" k="screen_record_block" type="toggle" hint="Pauses video when tab hidden" />
+          <Field label="Ads on free plan" k="free_plan_ads" type="toggle" />
+        </div>
+      </div>
+      <div className="card">
+        <div style={{fontWeight:700,fontSize:15,marginBottom:16}}>Homepage Layout</div>
+        <div className="form-group">
+          <label className="form-label">Featured categories (comma separated)</label>
+          <input value={settings.featured_categories||''} onChange={e=>set('featured_categories',e.target.value)} placeholder="Movies,Web Series,Shows,Drama" />
+        </div>
+      </div>
+      <button className="btn btn-primary" onClick={save} disabled={saving} style={{padding:'10px 28px'}}>
+        {saving ? 'Saving...' : 'Save All Settings'}
+      </button>
+    </div>
+  );
+}
+
+// ---- MAIN APP ----
+function App() {
+  const [admin, setAdmin] = useState(() => {
+    const t = localStorage.getItem('admin_token');
+    return t ? { name: 'Admin' } : null;
+  });
+  const [page, setPage] = useState('dashboard');
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const handler = e => setPage(e.detail);
+    window.addEventListener('nav', handler);
+    return () => window.removeEventListener('nav', handler);
+  }, []);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  if (!admin) return <Login onLogin={a => setAdmin(a)} />;
+
+  const MENU = [
+    { id: 'dashboard', label: '📊 Dashboard', section: 'Main' },
+    { id: 'videos', label: '🎬 Videos', section: 'Content' },
+    { id: 'users', label: '👥 Users', section: 'Management' },
+    { id: 'settings', label: '⚙️ Settings', section: 'Config' },
+  ];
+
+  const sections = [...new Set(MENU.map(m => m.section))];
+
+  return (
+    <div className="layout">
+      <div className="sidebar">
+        <div className="sidebar-logo">FlickPlay<small>Admin Panel</small></div>
+        {sections.map(s => (
+          <div key={s}>
+            <div className="s-section">{s}</div>
+            {MENU.filter(m => m.section === s).map(m => (
+              <div key={m.id} className={`s-item ${page === m.id ? 'active' : ''}`} onClick={() => setPage(m.id)}>{m.label}</div>
+            ))}
+          </div>
+        ))}
+        <div style={{marginTop:'auto',padding:'16px'}}>
+          <button className="btn btn-outline btn-sm" style={{width:'100%',color:'#ef4444',borderColor:'#7f1d1d'}}
+            onClick={() => { localStorage.removeItem('admin_token'); setAdmin(null); }}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+      <div className="main">
+        <div className="topbar">
+          <div className="topbar-title">{MENU.find(m=>m.id===page)?.label?.replace(/^\S+\s/,'') || 'Dashboard'}</div>
+          <div style={{fontSize:12,color:'#888'}}>Logged in as {admin.name}</div>
+        </div>
+        <div className="page">
+          {page === 'dashboard' && <Dashboard />}
+          {page === 'videos' && <Videos toast={showToast} />}
+          {page === 'users' && <Users toast={showToast} />}
+          {page === 'settings' && <Settings toast={showToast} />}
+        </div>
+      </div>
+      {toast && <Toast msg={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('admin-root')).render(<App />);
+</script>
+</body>
+</html>
