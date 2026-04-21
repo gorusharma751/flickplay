@@ -31,60 +31,89 @@ jobs:
             exit 1
           fi
 
-      - name: Merge PR as Owner
+      - name: Check PR author is allowed
+        id: check-author
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.OWNER_TOKEN }}
           script: |
-            const pullNumber = context.payload.pull_request.number;
             const prAuthor = context.payload.pull_request.user.login.toLowerCase();
-            const allowedAuthors = ['jaibhagwanjindal', 'gorusharma751'];
+            const allowedAuthors = ['jaibhagwanjindal'];
 
-            // 1. Verify PR author is in the allowed list
-            if (!allowedAuthors.map(a => a.toLowerCase()).includes(prAuthor)) {
-              core.notice(`Skipping: PR author @${prAuthor} is not in the allowed list [${allowedAuthors.join(', ')}].`);
+            if (!allowedAuthors.includes(prAuthor)) {
+              core.notice(`Skipping: PR author @${prAuthor} is not in the allowed list.`);
+              core.setOutput('allowed', 'false');
               return;
             }
 
-            core.notice(`✅ PR author @${prAuthor} is allowed. Proceeding with merge...`);
+            core.notice(`✅ PR author @${prAuthor} is allowed. Will merge as owner.`);
+            core.setOutput('allowed', 'true');
+            core.setOutput('pr_author', prAuthor);
+            core.setOutput('pr_number', context.payload.pull_request.number);
+            core.setOutput('head_sha', context.payload.pull_request.head.sha);
+            core.setOutput('head_ref', context.payload.pull_request.head.ref);
 
-            // 2. Identify the owner account from the token
-            const viewer = await github.graphql(`query { viewer { login } }`);
-            const ownerLogin = viewer.viewer.login;
-            core.notice(`Acting as owner: @${ownerLogin}`);
+      - name: Checkout repository as Owner
+        if: steps.check-author.outputs.allowed == 'true'
+        uses: actions/checkout@v4
+        with:
+          # Use OWNER_TOKEN so all git operations are authenticated as Gorusharma751
+          token: ${{ secrets.OWNER_TOKEN }}
+          ref: main
+          fetch-depth: 0
 
-            const { owner, repo } = context.repo;
-            const deadlineMs = Date.now() + 5 * 60 * 1000; // Try for 5 minutes
-            const waitMs = 20000; // Wait 20 seconds between tries
+      - name: Configure git identity as Owner (Gorusharma751)
+        if: steps.check-author.outputs.allowed == 'true'
+        run: |
+          # Fetch the owner's GitHub identity from the API using OWNER_TOKEN
+          OWNER_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.OWNER_TOKEN }}" \
+            https://api.github.com/user)
+          OWNER_LOGIN=$(echo "$OWNER_INFO" | jq -r '.login')
+          OWNER_ID=$(echo "$OWNER_INFO" | jq -r '.id')
+          # Use the no-reply email format that GitHub uses for web-based merges
+          OWNER_EMAIL="${OWNER_ID}+${OWNER_LOGIN}@users.noreply.github.com"
 
-          
-            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          echo "Configuring git as: $OWNER_LOGIN <$OWNER_EMAIL>"
+          git config user.name "$OWNER_LOGIN"
+          git config user.email "$OWNER_EMAIL"
 
-            while (Date.now() < deadlineMs) {
-              try {
-                await github.rest.pulls.merge({
-                  owner,
-                  repo,
-                  pull_number: pullNumber,
-                  merge_method: 'squash',
-                  commit_title: `Auto-merge PR #${pullNumber} from @${prAuthor}`,
-                  commit_message: `Automatically merged by @${ownerLogin} via GitHub Actions.`
-                });
+      - name: Merge PR branch into main as Owner
+        if: steps.check-author.outputs.allowed == 'true'
+        env:
+          PR_NUMBER: ${{ steps.check-author.outputs.pr_number }}
+          PR_AUTHOR: ${{ steps.check-author.outputs.pr_author }}
+          HEAD_REF: ${{ steps.check-author.outputs.head_ref }}
+          HEAD_SHA: ${{ steps.check-author.outputs.head_sha }}
+        run: |
+          echo "Fetching PR branch: origin/$HEAD_REF"
+          git fetch origin "$HEAD_REF"
 
-                core.notice(`✅ Successfully merged PR #${pullNumber} as @${ownerLogin}.`);
-                return;
-              } catch (error) {
-                const status = error.status;
-                // 405 (Blocked by CI), 409 (Conflict), or 422 (Unprocessable)
-                if ([405, 409, 422].includes(status)) {
-                  core.notice(`⏳ PR #${pullNumber} is not ready (Status ${status}). Checking again in 20 seconds...`);
-                  await sleep(waitMs);
-                  continue;
-                }
-                
-                core.setFailed(`❌ Merge failed with error ${status}: ${error.message}`);
-                return;
-              }
+          echo "Merging $HEAD_REF into main..."
+          git merge --no-ff "origin/$HEAD_REF" \
+            -m "Auto-merge PR #${PR_NUMBER} from @${PR_AUTHOR}" \
+            -m "Automatically merged by @$(git config user.name) via GitHub Actions."
+
+          echo "Pushing main as owner..."
+          git push origin main
+
+          echo "✅ PR #${PR_NUMBER} successfully merged as owner."
+
+      - name: Close and comment PR via API
+        if: steps.check-author.outputs.allowed == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.OWNER_TOKEN }}
+          script: |
+            const pullNumber = parseInt('${{ steps.check-author.outputs.pr_number }}');
+            const prAuthor = '${{ steps.check-author.outputs.pr_author }}';
+
+            // The PR should be auto-closed by the push, but add a comment for clarity
+            try {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: pullNumber,
+                body: `✅ PR #${pullNumber} from @${prAuthor} was automatically merged into \`main\` by the repository owner via GitHub Actions.`
+              });
+            } catch (e) {
+              core.warning(`Could not comment on PR: ${e.message}`);
             }
-
-            core.setFailed("❌ Timeout: The PR was not ready to merge after 5 minutes.");
