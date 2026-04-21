@@ -13,29 +13,15 @@ concurrency:
   group: auto-pr-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  ALLOWED_COLLABORATOR: jaibhagwanjindal,gorusharma751
-
-  
 jobs:
   create-or-reuse-pr:
-    # Only run if the push is from your account
     if: github.actor == 'JaibhagwanJindal' || github.actor == 'jaibhagwanjindal'
     runs-on: ubuntu-latest
     steps:
-      - name: Validate required secret
-        env:
-          OWNER_TOKEN: ${{ secrets.OWNER_TOKEN }}
-        run: |
-          if [ -z "$OWNER_TOKEN" ]; then
-            echo "OWNER_TOKEN secret is missing in repository settings."
-            exit 1
-          fi
-
-      - name: Create or Update Pull Request
+      - name: Create Pull Request as JaibhagwanJindal
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.OWNER_TOKEN }}
+          github-token: ${{ secrets.JAIBHAGWAN_TOKEN }}  # ← Use Jaibhagwan's token
           script: |
             const { owner, repo } = context.repo;
             const branch = context.ref.replace('refs/heads/', '');
@@ -56,7 +42,7 @@ jobs:
               return;
             }
 
-            // 2. Create the PR if none exists
+            // 2. Create the PR
             const shortSha = context.sha.substring(0, 7);
             const title = `Contribution: ${branch} (${shortSha})`;
             const body = `Automatically generated PR for push by @${actor} to trigger Vercel Hobby build flow via Owner-signed merge.`;
@@ -72,9 +58,8 @@ jobs:
                 maintainer_can_modify: true
               });
 
-              core.notice(`Successfully created PR #${pr.data.number}`);
+              core.notice(`✅ PR created by @${actor}: #${pr.data.number}`);
               
-              // Optional: Add a label to help the merge script identify it
               await github.rest.issues.addLabels({
                 owner,
                 repo,
