@@ -1,0 +1,28 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://flickplay.vercel.app"
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "api/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "features": false,
+      "develop": false
+    }
+  },
+  "github": {
+    "enabled": true,
+    "autoAlias": false,
+    "autoAssignCustomDomains": false
+  },
+  "public": false,
+  "framework": "nextjs"
+}
