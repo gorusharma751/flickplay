@@ -1,8 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/build",
   "env": {
-    "NEXT_PUBLIC_APP_URL": "https://flickplay.vercel.app"
+    "REACT_APP_URL": "https://flickplay.vercel.app"
   },
   "regions": ["iad1"],
   "functions": {
@@ -23,6 +23,5 @@
     "autoAlias": false,
     "autoAssignCustomDomains": false
   },
-  "public": false,
-  "framework": "nextjs"
+  "public": false
 }
