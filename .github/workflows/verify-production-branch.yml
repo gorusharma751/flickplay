@@ -12,6 +12,7 @@ concurrency:
   group: deployment-check-${{ github.ref }}
   cancel-in-progress: false
 
+  
 jobs:
   check-branch:
     name: Ensure only main can deploy
@@ -27,7 +28,7 @@ jobs:
             exit 0
           fi
 
-          
+
       - name: Document deployment policy
         run: |
           echo "📋 Deployment Policy:"
