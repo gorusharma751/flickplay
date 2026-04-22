@@ -89,7 +89,7 @@ jobs:
           git fetch origin "$HEAD_REF"
 
           echo "Merging $HEAD_REF into main..."
-          git merge --no-ff "origin/$HEAD_REF" \
+          git merge --no-ff -X theirs "origin/$HEAD_REF" \
             -m "Auto-merge PR #${PR_NUMBER} from @${PR_AUTHOR}" \
             -m "Automatically merged by @$(git config user.name) via GitHub Actions."
 
