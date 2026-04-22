@@ -1,21 +1,15 @@
 {
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "build",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "echo skip",
   "env": {
     "REACT_APP_URL": "https://flickplay.vercel.app"
   },
-  "regions": ["iad1"],
   "git": {
     "deploymentEnabled": {
       "main": true,
       "features": false,
       "develop": false
     }
-  },
-  "github": {
-    "enabled": true,
-    "autoAlias": false,
-    "autoAssignCustomDomains": false
-  },
-  "public": false
+  }
 }
